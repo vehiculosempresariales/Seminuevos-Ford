@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Catálogo Seminuevos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .card-hover { transition: box-shadow .2s ease, transform .2s ease; }
+      .card-hover:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.06); }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <div id="root"></div>
+
+    <!-- React + ReactDOM UMD -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel para compilar JSX en el navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel" data-presets="react">
+      const { useMemo, useState, useEffect } = React;
+
+      const HEADER_CLS = "bg-gradient-to-r from-blue-900 to-blue-600 text-white";
+      const ENGANCHE_OPCIONES = [
+        { key: "10", pct: 0.10, label: "10%" },
+        { key: "20", pct: 0.20, label: "20%" },
+        { key: "30", pct: 0.30, label: "30%" },
+        { key: "50", pct: 0.50, label: "50%" },
+        { key: "contado", pct: 1, label: "Contado" },
+      ];
+      const WHATSAPP_NUMBER = "528132810992"; // cámbialo si quieres
+      const ADDRESS_STR = "Av. Pino Suárez 227, Centro, 64000 Monterrey, N.L.";
+      const MAPS_URL = "https://www.google.com/maps/dir/?api=1&destination=Av.%20Pino%20Su%C3%A1rez%20227%2C%20Centro%2C%2064000%20Monterrey%2C%20N.L.";
+
+      const peso = (n) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+      const kms = (n) => `${n.toLocaleString("es-MX")} km`;
+      const getPct = (key) => (ENGANCHE_OPCIONES.find((o) => o.key === key)?.pct ?? 0);
+      const calcEnganche = (precio, key) => Math.round(precio * getPct(key));
+      const calcRestante = (precio, key) => Math.max(0, precio - calcEnganche(precio, key));
+      const engancheLabel = (key) => (key === 'contado' ? 'Contado' : (ENGANCHE_OPCIONES.find(o=>o.key===key)?.label ?? ''));
+
+      function buildWhatsAppMessage(row, downKey, buro) {
+        if (!row) return "";
+        const eng = calcEnganche(row.precio, downKey);
+        const rest = calcRestante(row.precio, downKey);
+        const buroTxt = buro === 'bien' ? 'Bien en buró' : 'Con detalles en buró';
+        return [
+          `Hola, me interesa el ${row.marca} ${row.modelo} ${row.anio} (${row.color}, ${kms(row.km)})`,
+          `Precio: ${peso(row.precio)}`,
+          `Opción: ${engancheLabel(downKey)}`,
+          `Enganche: ${peso(eng)}`,
+          `Restante: ${peso(rest)}`,
+          `Estatus buró: ${buroTxt}`,
+          `¿Sigue disponible?`
+        ].join("\\n");
+      }
+      function buildWhatsAppHref(row, downKey, buro) {
+        const text = buildWhatsAppMessage(row, downKey, buro);
+        return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+      }
+
+      const INVENTARIO = [
+        { marca: "AUDI", catalogo: "A1 EGO", anio: 2015, modelo: "A1 EGO", km: 110000, color: "BLANCO", transmision: "AUT", precio: 225000 },
+        { marca: "AUDI", catalogo: "A4 DYNAMIC", anio: 2018, modelo: "A4 DYNAMIC", km: 1340000, color: "GRIS", transmision: "AUT", precio: 290000 },
+        { marca: "CHEVROLET", catalogo: "TRACKER LS", anio: 2022, modelo: "TRACKER LS", km: 55000, color: "BLANCO", transmision: "STD", precio: 229000 },
+        { marca: "CHEVROLET", catalogo: "SUBURBAN PREMIER", anio: 2019, modelo: "SUBURBAN PREMIER", km: 93000, color: "BLANCO", transmision: "AUT", precio: 650000 },
+        { marca: "CHEVROLET", catalogo: "TRAVERSE LT", anio: 2021, modelo: "TRAVERSE LT", km: 98000, color: "BLANCO", transmision: "AUT", precio: 555000 },
+        { marca: "CHEVROLET", catalogo: "CHEYENNE HIGH COUNTRY", anio: 2021, modelo: "CHEYENNE HIGH COUNTRY", km: 57000, color: "AZUL", transmision: "AUT", precio: 889000 },
+        { marca: "CHEVROLET", catalogo: "TRAX LS", anio: 2017, modelo: "TRAX LS", km: 89000, color: "BLANCO", transmision: "STD", precio: 239000 },
+        { marca: "GMC", catalogo: "TERRAIN DENALI", anio: 2020, modelo: "TERRAIN DENALI", km: 82000, color: "NEGRO", transmision: "AUT", precio: 529000 },
+        { marca: "GMC", catalogo: "SIERRA DENALLI", anio: 2016, modelo: "SIERRA DENALLI", km: 139000, color: "BLANCO", transmision: "AUT", precio: 470000 },
+        { marca: "DODGE", catalogo: "JOURNEY GT", anio: 2022, modelo: "JOURNEY GT", km: 43000, color: "PLATA", transmision: "AUT", precio: 430000 },
+        { marca: "JAC", catalogo: "FRISON T8 DIESEL", anio: 2023, modelo: "FRISON T8 DIESEL", km: 60000, color: "BLANCO", transmision: "STD", precio: 350000 },
+        { marca: "HONDA", catalogo: "ODYSSEY LX", anio: 2014, modelo: "ODYSSEY LX", km: 120000, color: "BLANCO", transmision: "AUT", precio: 259000 },
+        { marca: "FORD", catalogo: "FIESTA SE", anio: 2015, modelo: "FIESTA SE", km: 111000, color: "BLANCO", transmision: "AUT", precio: 155000 },
+        { marca: "FORD", catalogo: "TRANSIT COURIER", anio: 2022, modelo: "TRANSIT COURIER", km: 55000, color: "PLATA", transmision: "STD", precio: 309000 },
+        { marca: "FORD", catalogo: "FOCUS APARENCE HB", anio: 2015, modelo: "FOCUS APARENCE HB", km: 155000, color: "BLANCO", transmision: "AUT", precio: 179000 },
+        { marca: "FORD", catalogo: "F 150", anio: 2016, modelo: "F 150", km: 150000, color: "GRIS", transmision: "AUT", precio: 389000 },
+        { marca: "FORD", catalogo: "BRONCO BADLANDS", anio: 2021, modelo: "BRONCO BADLANDS", km: 35000, color: "GRIS", transmision: "AUT", precio: 1049000 },
+        { marca: "FORD", catalogo: "BRONCO BADLANDS", anio: 2021, modelo: "BRONCO BADLANDS", km: 70000, color: "NARANJA", transmision: "AUT", precio: 950000 },
+        { marca: "FORD", catalogo: "BRONCO OUTERBANKS", anio: 2022, modelo: "BRONCO OUTERBANKS", km: 85000, color: "AZUL", transmision: "AUT", precio: 529000 },
+        { marca: "FORD", catalogo: "BRONCO BIG BEND", anio: 2021, modelo: "BRONCO BIG BEND", km: 37000, color: "BLANCO", transmision: "AUT", precio: 499000 },
+        { marca: "FORD", catalogo: "BRONCO FIRST EDITION", anio: 2021, modelo: "BRONCO FIRST EDITION", km: 89000, color: "ROJO", transmision: "AUT", precio: 600000 },
+        { marca: "FORD", catalogo: "EDGE SEL PLUS", anio: 2019, modelo: "EDGE SEL PLUS", km: 115000, color: "PLATA", transmision: "AUT", precio: 399000 },
+        { marca: "FORD", catalogo: "ESCAPE TITANIUM", anio: 2019, modelo: "ESCAPE TITANIUM", km: 105000, color: "PLATA", transmision: "AUT", precio: 365000 },
+        { marca: "FORD", catalogo: "EXPLORER ST PAQ ENTRET", anio: 2021, modelo: "EXPLORER ST PAQ ENTRET", km: 16000, color: "NEGRO", transmision: "AUT", precio: 790000 },
+        { marca: "FORD", catalogo: "EXPLORER ST", anio: 2023, modelo: "EXPLORER ST", km: 5000, color: "NEGRO", transmision: "AUT", precio: 1150000 },
+        { marca: "FORD", catalogo: "EXPLORER XLT", anio: 2016, modelo: "EXPLORER XLT", km: 114000, color: "BLANCO", transmision: "AUT", precio: 329000 },
+        { marca: "FORD", catalogo: "EXPEDITION LIMITED 4X2", anio: 2018, modelo: "EXPEDITION LIMITED 4X2", km: 70000, color: "GRIS", transmision: "AUT", precio: 630000 },
+        { marca: "FORD", catalogo: "EXPEDITION LIMITED 4X2", anio: 2018, modelo: "EXPEDITION LIMITED 4X2", km: 108000, color: "PLATA", transmision: "AUT", precio: 630000 },
+        { marca: "FORD", catalogo: "TRANSIT VAN LARGA (DIESEL)", anio: 2020, modelo: "TRANSIT VAN LARGA (DIESEL)", km: 85000, color: "BLANCO", transmision: "STD", precio: 625000 },
+        { marca: "FORD", catalogo: "LOBO PLATINUM", anio: 2023, modelo: "LOBO PLATINUM", km: 70000, color: "BLANCO", transmision: "AUT", precio: 1099000 },
+        { marca: "FORD", catalogo: "LOBO LIMITED", anio: 2023, modelo: "LOBO LIMITED", km: 26000, color: "NEGRO", transmision: "AUT", precio: 1199000 },
+        { marca: "FORD", catalogo: "LOBO LIMITED", anio: 2018, modelo: "LOBO LIMITED", km: 108000, color: "BLANCA", transmision: "AUT", precio: 690000 },
+        { marca: "FORD", catalogo: "RANGER WILDTRACK", anio: 2022, modelo: "RANGER WILDTRACK", km: 89000, color: "NEGRA", transmision: "AUT", precio: 599000 },
+        { marca: "FORD", catalogo: "RANGER XLT", anio: 2021, modelo: "RANGER XLT", km: 45000, color: "ROJO", transmision: "STD", precio: 439000 },
+        { marca: "FORD", catalogo: "RANGER XLT", anio: 2020, modelo: "RANGER XLT", km: 42000, color: "AZUL", transmision: "STD", precio: 480000 },
+        { marca: "FORD", catalogo: "TERRITORY TITANIUM", anio: 2024, modelo: "TERRITORY TITANIUM", km: 11000, color: "NEGRO", transmision: "AUT", precio: 499000 },
+        { marca: "FORD", catalogo: "TERRITORY TITANIUM", anio: 2025, modelo: "TERRITORY TITANIUM", km: 5000, color: "GRIS", transmision: "AUT", precio: 635000 },
+        { marca: "FORD", catalogo: "TERRITORY TREND", anio: 2023, modelo: "TERRITORY TREND", km: 28000, color: "BLANCO", transmision: "AUT", precio: 549000 },
+        { marca: "FORD", catalogo: "TERRITORY TREND", anio: 2023, modelo: "TERRITORY TREND", km: 25000, color: "BLANCO", transmision: "AUT", precio: 549000 },
+        { marca: "FORD", catalogo: "EDGE SPORT", anio: 2017, modelo: "EDGE SPORT", km: 120000, color: "VINO", transmision: "AUT", precio: 340000 },
+        { marca: "MERCEDES BENZ", catalogo: "GLC 300", anio: 2019, modelo: "GLC 300", km: 110000, color: "PLATA", transmision: "AUT", precio: 450000 },
+        { marca: "MITSUBISHI", catalogo: "ECPLISE CROSS", anio: 2019, modelo: "ECPLISE CROSS", km: 74000, color: "PLATA", transmision: "AUT", precio: 350000 },
+        { marca: "NISSAN", catalogo: "X TRAIL SENSE", anio: 2021, modelo: "X TRAIL SENSE", km: 122300, color: "BLANCO", transmision: "AUT", precio: 349000 },
+        { marca: "NISSAN", catalogo: "X TRAIL SENSE", anio: 2022, modelo: "X TRAIL SENSE", km: 40000, color: "BLANCO", transmision: "AUT", precio: 369000 },
+        { marca: "NISSAN", catalogo: "X TRAIL PLATINUM PLUS", anio: 2025, modelo: "X TRAIL PLATINUM PLUS", km: 3000, color: "BLANCO", transmision: "AUT", precio: 660000 },
+        { marca: "NISSAN", catalogo: "X TRAIL ADVANCE", anio: 2021, modelo: "X TRAIL ADVANCE", km: 118000, color: "BLANCO", transmision: "AUT", precio: 379000 },
+        { marca: "NISSAN", catalogo: "PATHFINDER ADVANCE", anio: 2013, modelo: "PATHFINDER ADVANCE", km: 12000, color: "BLANCO", transmision: "AUT", precio: 249000 },
+        { marca: "NISSAN", catalogo: "SENTRA ADVANCE", anio: 2015, modelo: "SENTRA ADVANCE", km: 124000, color: "PLATA", transmision: "AUT", precio: 199000 },
+        { marca: "KIA", catalogo: "SEDONA LX", anio: 2020, modelo: "SEDONA LX", km: 84000, color: "PLATA", transmision: "AUT", precio: 315000 },
+        { marca: "SUZUKI", catalogo: "S-CROSS BOOSTER JET", anio: 2020, modelo: "S-CROSS BOOSTER JET", km: 64200, color: "BLANCO", transmision: "AUT", precio: 355000 },
+        { marca: "VW", catalogo: "JETTA R LINE", anio: 2019, modelo: "JETTA R LINE", km: 75000, color: "BLANCO", transmision: "AUT", precio: 339000 },
+      ];
+
+      const Pill = ({ active, children, onClick }) => (
+        <button
+          onClick={onClick}
+          className={`px-4 py-2 rounded-full border transition card-hover text-sm font-medium ${active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-800 border-gray-200 hover:border-blue-400"}`}
+        >
+          {children}
+        </button>
+      );
+
+      function App() {
+        const [brand, setBrand] = useState("TODAS");
+        const [sortKey, setSortKey] = useState("anio");
+        const [sortDir, setSortDir] = useState("desc");
+
+        const [configOpen, setConfigOpen] = useState(false);
+        const [selected, setSelected] = useState(null);
+        const [downKey, setDownKey] = useState("20");
+        const [buro, setBuro] = useState("bien");
+
+        const YEARS = useMemo(() => Array.from(new Set(INVENTARIO.map(r => r.anio))).sort((a,b)=>a-b), []);
+        const YEARS_MIN = YEARS[0];
+        const YEARS_MAX = YEARS[YEARS.length-1];
+        const [yearFrom, setYearFrom] = useState(YEARS_MIN);
+        const [yearTo, setYearTo] = useState(YEARS_MAX);
+        const resetYears = () => { setYearFrom(YEARS_MIN); setYearTo(YEARS_MAX); };
+        const setOnlyYear = (y) => { setYearFrom(y); setYearTo(y); };
+        const isActiveYear = (y) => yearFrom === y && yearTo === y;
+
+        const openConfig = (row) => {
+          setSelected(row);
+          setDownKey("20");
+          setBuro("bien");
+          setConfigOpen(true);
+        };
+
+        useEffect(() => {
+          const onEsc = (e) => e.key === "Escape" && setConfigOpen(false);
+          window.addEventListener("keydown", onEsc);
+          return () => window.removeEventListener("keydown", onEsc);
+        }, []);
+
+        const MARCAS = useMemo(() => Array.from(new Set(INVENTARIO.map((x) => x.marca))).sort(), []);
+
+        const data = useMemo(() => {
+          let rows = [...INVENTARIO];
+          if (brand !== "TODAS") rows = rows.filter((r) => r.marca === brand);
+          rows = rows.filter(r => r.anio >= yearFrom && r.anio <= yearTo);
+          rows.sort((a, b) => {
+            const dir = sortDir === "asc" ? 1 : -1;
+            if (["precio","km","anio"].includes(sortKey)) return (a[sortKey] - b[sortKey]) * dir;
+            return String(a[sortKey]).localeCompare(String(b[sortKey])) * dir;
+          });
+          return rows;
+        }, [brand, sortKey, sortDir, yearFrom, yearTo]);
+
+        const toggleSort = (key) => {
+          if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+          else { setSortKey(key); setSortDir("asc"); }
+        };
+
+        const resumenFinanciamiento = useMemo(() => {
+          if (!selected) return null;
+          const enganche = calcEnganche(selected.precio, downKey);
+          const restante = calcRestante(selected.precio, downKey);
+          return { enganche, restante };
+        }, [selected, downKey]);
+
+        const waHref = useMemo(() => selected ? buildWhatsAppHref(selected, downKey, buro) : "#", [selected, downKey, buro]);
+
+        return (
+          <div className="min-h-screen bg-gray-50 text-gray-900">
+            <header className={HEADER_CLS}>
+              <div className="max-w-7xl mx-auto px-6 py-6">
+                <div className="flex items-center gap-4 md:gap-6">
+                  <img src="ford-am.png" alt="Ford Automotriz Monterrey" className="w-20 md:w-28 h-auto object-contain" />
+                  <div className="flex-1">
+                    <h1 className="text-left text-3xl md:text-5xl font-bold tracking-tight">
+                      Catalogo seminuevo Ford, <span className="ml-1" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.55)" }}>MULTIMARCA</span>
+                    </h1>
+                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
+                      <span className="text-sm md:text-base text-blue-100">Dirección: {ADDRESS_STR}</span>
+                      <a href={MAPS_URL} target="_blank" rel="noopener noreferrer"
+                         className="inline-flex w-max items-center justify-center rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20"
+                         title="Abrir en Google Maps">🧭 Cómo llegar</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <section className="max-w-7xl mx-auto px-6 -mt-6">
+              <div className="bg-white shadow-xl rounded-2xl p-5 md:p-6 border border-gray-100">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3 justify-center text-center">
+                  <Pill active={brand === "TODAS"} onClick={() => setBrand("TODAS")}>Todas las marcas</Pill>
+                  {MARCAS.map((m) => (
+                    <Pill key={m} active={brand === m} onClick={() => setBrand(m)}>{m}</Pill>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="max-w-7xl mx-auto px-6 mt-6">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5 flex flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button onClick={() => { setYearFrom(YEARS_MIN); setYearTo(YEARS_MAX); }}
+                          className={`px-3 py-2 rounded-full border text-sm ${yearFrom===YEARS_MIN && yearTo===YEARS_MAX?"bg-blue-600 text-white border-blue-600":"bg-white text-gray-700 border-gray-200 hover:border-blue-400"}`}>
+                    Todos
+                  </button>
+                  {YEARS.map((y) => (
+                    <button key={`y-${y}`} onClick={() => { setYearFrom(y); setYearTo(y); }}
+                            className={`px-3 py-2 rounded-full border text-sm ${isActiveYear(y)?"bg-blue-600 text-white border-blue-600":"bg-white text-gray-700 border-gray-200 hover:border-blue-400"}`}
+                            title={`Filtrar solo ${y}`}>
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="max-w-7xl mx-auto px-6 mt-6 mb-16">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 text-gray-700">
+                      <tr>
+                        {[
+                          { key: "catalogo", label: "Catálogo" },
+                          { key: "anio", label: "Año" },
+                          { key: "modelo", label: "Modelo" },
+                          { key: "km", label: "Kilómetros" },
+                          { key: "color", label: "Color Ext." },
+                          { key: "transmision", label: "Transmisión" },
+                          { key: "precio", label: "Precio Neto" },
+                        ].map((h) => (
+                          <th key={h.key} className="px-4 py-3 font-semibold text-left">
+                            <button className={`inline-flex items-center gap-1 ${sortKey===h.key?"text-blue-700":"text-gray-700"}`}
+                                    onClick={() => {
+                                      if (sortKey === h.key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                                      else { setSortKey(h.key); setSortDir("asc"); }
+                                    }}
+                                    title="Ordenar">
+                              {h.label}
+                              {sortKey === h.key && (<span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>)}
+                            </button>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.length === 0 && (
+                        <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-500">No hay resultados para tu búsqueda.</td></tr>
+                      )}
+                      {data.map((r, i) => (
+                        <tr key={`${r.catalogo}-${i}`} className={i % 2 ? "bg-white" : "bg-gray-50/50"}>
+                          <td className="px-4 py-3 font-semibold text-gray-900">{r.catalogo}</td>
+                          <td className="px-4 py-3">{r.anio}</td>
+                          <td className="px-4 py-3">
+                            <button onClick={() => openConfig(r)} className="text-blue-600 hover:underline font-medium" title="Configurar financiamiento">
+                              {r.modelo}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3">{kms(r.km)}</td>
+                          <td className="px-4 py-3">{r.color}</td>
+                          <td className="px-4 py-3">{r.transmision}</td>
+                          <td className="px-4 py-3 font-bold">{peso(r.precio)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center justify-between gap-3 px-4 py-4 bg-gray-50 border-t">
+                  <div className="text-xs text-gray-500">*Precios netos informativos, sujetos a cambios sin previo aviso. Disponibilidad y validación final con el asesor.</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-700">✅ Revisión mecánica disponible | Historial a solicitud</div>
+                </div>
+              </div>
+            </section>
+
+            {configOpen && selected && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/40" onClick={() => setConfigOpen(false)}></div>
+                <div className="relative bg-white rounded-2xl shadow-2xl w-[95vw] max-w-2xl p-6">
+                  <button aria-label="Cerrar" className="absolute right-3 top-3 text-gray-400 hover:text-gray-600" onClick={() => setConfigOpen(false)}>×</button>
+
+                  <h2 className="text-xl font-bold text-gray-900">{selected.marca} · {selected.modelo}</h2>
+                  <p className="text-sm text-gray-500 mt-1">Precio: <span className="font-semibold">{peso(selected.precio)}</span></p>
+
+                  <div className="mt-5">
+                    <h3 className="text-sm font-semibold text-gray-700">Selecciona enganche</h3>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {ENGANCHE_OPCIONES.map((o) => (
+                        <button key={o.key} onClick={() => setDownKey(o.key)}
+                          className={`px-3 py-2 rounded-lg border text-sm ${downKey===o.key?"bg-blue-600 text-white border-blue-600":"bg-white text-gray-700 border-gray-200 hover:border-blue-400"}`}>
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <h3 className="text-sm font-semibold text-gray-700">Situación en buró</h3>
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <label className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer ${buro==='bien'?"border-blue-600 bg-blue-50":"border-gray-200"}`}>
+                        <input type="radio" name="buro" className="hidden" checked={buro==='bien'} onChange={() => setBuro('bien')} />
+                        <span className="text-sm font-medium">Me encuentro bien en buró</span>
+                      </label>
+                      <label className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer ${buro==='detalles'?"border-blue-600 bg-blue-50":"border-gray-200"}`}>
+                        <input type="radio" name="buro" className="hidden" checked={buro==='detalles'} onChange={() => setBuro('detalles')} />
+                        <span className="text-sm font-medium">Tengo detalles en buró</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 bg-gray-50 border border-gray-100 rounded-xl p-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="text-gray-600">Enganche seleccionado</div>
+                      <div className="font-semibold">{engancheLabel(downKey)}</div>
+                      <div className="text-gray-600">Monto de enganche</div>
+                      <div className="font-semibold">{peso(calcEnganche(selected.precio, downKey))}</div>
+                      <div className="text-gray-600">Restante por financiar</div>
+                      <div className="font-semibold">{peso(calcRestante(selected.precio, downKey))}</div>
+                      <div className="text-gray-600">Situación en buró</div>
+                      <div className="font-semibold">{buro === 'bien' ? 'Bien en buró' : 'Con detalles en buró'}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap gap-2 justify-end">
+                    <a href={waHref} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                      title="Enviar WhatsApp al asesor">📲 WhatsApp al asesor</a>
+                    <button onClick={() => setConfigOpen(false)} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700">Cerrar</button>
+                    <button onClick={() => setConfigOpen(false)} className="px-4 py-2 rounded-lg bg-blue-600 text-white">Listo</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
+</html>
